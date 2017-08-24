@@ -1,0 +1,97 @@
+import pandas
+from pandas.tools.plotting import scatter_matrix
+import matplotlib.pyplot as plt
+from sklearn import model_selection
+from sklearn.metrics import classification_report
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import accuracy_score
+from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.naive_bayes import GaussianNB
+from sklearn.svm import SVC
+
+# Loading our dataset
+url = 'https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data'
+names = ['sepal-length', 'sepal-width', 'petal-length', 'petal-width', 'class']
+dataset = pandas.read_csv(url, names=names)
+
+# Check data. Result will show (instances, attributes)
+#print(dataset.shape)
+#print(dataset.groupby('class').size())
+
+# Check an extract of the dataset
+#print(dataset.head(10))
+
+# Check the statistical composition of our dataset
+#print(dataset.describe())
+
+# Data visualization
+
+# Box and whisker plot
+#dataset.plot(kind='box', subplots=True, layout=(2,2), sharex=False, sharey=False)
+#dataset.hist()
+#scatter_matrix(dataset)
+#plt.show()
+
+# Split dataset into training data and validation
+array = dataset.values
+X = array[:,0:4]
+Y = array[:,4]
+validations_size = 0.45
+seed = 50
+scoring = 'accuracy'
+X_train, X_validation, Y_train, Y_validation = model_selection.train_test_split(X, Y, test_size=validations_size, random_state=seed)
+
+# Building the actual models
+models = []
+models.append(('LR', LogisticRegression()))
+models.append(('LDA', LinearDiscriminantAnalysis()))
+models.append(('KNN', KNeighborsClassifier()))
+models.append(('DT', DecisionTreeClassifier()))
+models.append(('NB', GaussianNB()))
+models.append(('SVM', SVC()))
+
+# Evaluate every single model
+results = []
+names = []
+kfold = model_selection.KFold(n_splits=5, random_state=seed)
+for name, model in models:
+    #kfold = model_selection.KFold(n_splits=5, random_state=seed)
+    cv_results = model_selection.cross_val_score(model, X_train, Y_train, cv=kfold, scoring=scoring)
+    results.append(cv_results)
+    names.append(name)
+    msg = '%s: %f (%f)' % (name, cv_results.mean(), cv_results.std())
+   # print(msg)
+
+# Compare our different model outputs
+fig = plt.figure()
+fig.suptitle('Algorithm Comparison')
+ax = fig.add_subplot(111)
+plt.boxplot(results)
+ax.set_xticklabels(names)
+#plt.show()
+
+# Predict
+SVM = SVC(kernel='rbf', gamma='auto', probability=True, shrinking=False)
+SVM.fit(X_train, Y_train)
+
+LDA = LinearDiscriminantAnalysis()
+LDA.fit(X_train, Y_train)
+
+KNN = KNeighborsClassifier(n_neighbors=4)
+KNN.fit(X_train, Y_train)
+
+predictions_SVM = SVM.predict(X_validation)
+predictions_LDA = LDA.predict(X_validation)
+predictions_KNN = KNN.predict(X_validation)
+
+print('SVM accuracy: ', accuracy_score(Y_validation, predictions_SVM), '%')
+#print(confusion_matrix(Y_validation, predictions_SVM))
+#print(classification_report(Y_validation, predictions_SVM))
+
+print('LDA accuracy: ', accuracy_score(Y_validation, predictions_LDA), '%')
+#print(classification_report(Y_validation, predictions_LDA))
+
+print('KNN accuracy: ', accuracy_score(Y_validation, predictions_KNN), '%')
